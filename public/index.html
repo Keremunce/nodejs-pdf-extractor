@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Text Extractor</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #f0f4f8;
+        color: #1f2933;
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      main {
+        width: min(840px, 100%);
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 2.5rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+        display: grid;
+        gap: 1.5rem;
+      }
+
+      h1 {
+        margin: 0;
+        text-align: center;
+        font-size: clamp(1.8rem, 3vw, 2.4rem);
+      }
+
+      form {
+        display: grid;
+        gap: 1rem;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      input[type="file"] {
+        padding: 0.9rem;
+        border-radius: 12px;
+        border: 1px solid #cbd2d9;
+        background: #f7fafc;
+      }
+
+      button {
+        justify-self: start;
+        padding: 0.85rem 1.75rem;
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 20px rgba(37, 99, 235, 0.2);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+        box-shadow: none;
+      }
+
+      #status {
+        min-height: 1.5rem;
+        font-size: 0.95rem;
+        color: #52606d;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 26rem;
+        padding: 1.25rem;
+        border-radius: 14px;
+        border: 1px solid #cbd2d9;
+        background: #f7fafc;
+        resize: vertical;
+        font-size: 1rem;
+        line-height: 1.6;
+      }
+
+      textarea:focus {
+        outline: 3px solid rgba(37, 99, 235, 0.2);
+        border-color: #2563eb;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 1rem;
+        }
+
+        main {
+          padding: 1.75rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>PDF Text Extractor</h1>
+      <p>
+        Select a PDF using the form below. Once the server processes the file,
+        the extracted text will appear in the large text area.
+      </p>
+      <form id="upload-form">
+        <label for="pdfFile">
+          PDF file
+          <input type="file" id="pdfFile" name="pdf" accept="application/pdf" />
+        </label>
+        <button id="submitBtn" type="submit">Extract text</button>
+      </form>
+      <div id="status" aria-live="polite"></div>
+      <label for="resultText">
+        Extracted text
+        <textarea
+          id="resultText"
+          placeholder="The extracted text will appear here"
+          readonly
+        ></textarea>
+      </label>
+    </main>
+    <script>
+      const form = document.getElementById("upload-form");
+      const fileInput = document.getElementById("pdfFile");
+      const resultText = document.getElementById("resultText");
+      const statusEl = document.getElementById("status");
+      const submitBtn = document.getElementById("submitBtn");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const file = fileInput.files?.[0];
+        if (!file) {
+          statusEl.textContent = "Please choose a PDF file.";
+          fileInput.focus();
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("pdf", file);
+
+        statusEl.textContent = "Processing PDF...";
+        resultText.value = "";
+        submitBtn.disabled = true;
+
+        try {
+          const response = await fetch("/extract", {
+            method: "POST",
+            body: formData,
+          });
+
+          const payload = await response.text();
+
+          if (!response.ok) {
+            throw new Error(payload || `Server error: ${response.status}`);
+          }
+
+          resultText.value = payload || "(No text found)";
+          statusEl.textContent = "Done.";
+        } catch (error) {
+          statusEl.textContent = "Something went wrong.";
+          resultText.value = error.message;
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
